@@ -10,6 +10,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import withStyles from 'isomorphic-style-loader/lib/withStyles';
+import { Button } from 'antd';
 import s from './Home.css';
 
 class Home extends React.Component {
@@ -28,6 +29,11 @@ class Home extends React.Component {
       <div className={s.root}>
         <div className={s.container}>
           <h1>React.js News</h1>
+
+          <Button size="large" type="primary" icon="plus">
+            Ant-Design Button
+          </Button>
+
           {this.props.news.map(item => (
             <article key={item.link} className={s.newsItem}>
               <h1 className={s.newsTitle}>

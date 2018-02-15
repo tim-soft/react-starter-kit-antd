@@ -12,8 +12,18 @@ import webpack from 'webpack';
 import AssetsPlugin from 'assets-webpack-plugin';
 import nodeExternals from 'webpack-node-externals';
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
+import fs from 'fs';
+import ExtractTextPlugin from 'extract-text-webpack-plugin';
+import lessToJS from 'less-vars-to-js';
 import overrideRules from './lib/overrideRules';
 import pkg from '../package.json';
+
+const themeVariables = lessToJS(
+  fs.readFileSync(
+    path.resolve(__dirname, '../src/components/antTheme.less'),
+    'utf8',
+  ),
+);
 
 const isDebug = !process.argv.includes('--release');
 const isVerbose = process.argv.includes('--verbose');
@@ -117,9 +127,52 @@ const config = {
         },
       },
 
+      // Import Ant-Design styles
+      {
+        test: /\.css$/,
+        include: [/node_modules\/.*antd/],
+        use: [
+          {
+            loader: 'style-loader',
+          },
+          {
+            loader: 'css-loader',
+          },
+          {
+            loader: 'postcss-loader',
+            options: {
+              config: {
+                path: './tools/postcss.config.js',
+              },
+            },
+          },
+        ],
+      },
+
+      {
+        test: /\.less$/,
+        include: [/node_modules\/.*antd/],
+        use: ExtractTextPlugin.extract({
+          fallback: 'style-loader',
+          use: [
+            {
+              loader: 'css-loader', // translates CSS into CommonJS
+            },
+            {
+              loader: 'less-loader', // compiles Less to CSS
+              options: {
+                modifyVars: themeVariables,
+              },
+            },
+          ],
+        }),
+      },
+
       // Rules for Style Sheets
       {
         test: reStyle,
+        // Don't load antd styles with these loaders
+        exclude: [/node_modules\/.*antd/],
         rules: [
           // Convert CSS into JS module
           {
@@ -167,11 +220,14 @@ const config = {
 
           // Compile Less to CSS
           // https://github.com/webpack-contrib/less-loader
-          // Install dependencies before uncommenting: yarn add --dev less-loader less
-          // {
-          //   test: /\.less$/,
-          //   loader: 'less-loader',
-          // },
+          // Load antd theme variables from src/components/antTheme.less antd theme variables
+          {
+            test: /\.less$/,
+            loader: 'less-loader',
+            options: {
+              modifyVars: themeVariables,
+            },
+          },
 
           // Compile Sass to CSS
           // https://github.com/webpack-contrib/sass-loader
@@ -299,6 +355,9 @@ const clientConfig = {
   },
 
   plugins: [
+    // Include ant-design stylesheet
+    new ExtractTextPlugin('antStyles.css'),
+
     // Define free variables
     // https://webpack.js.org/plugins/define-plugin/
     new webpack.DefinePlugin({
@@ -478,5 +537,11 @@ const serverConfig = {
     __dirname: false,
   },
 };
+
+// Only use babel-plugin-import in client side
+clientConfig.module.rules[0].options.plugins = [
+  ...clientConfig.module.rules[0].options.plugins,
+  ['import', { libraryName: 'antd', style: true }],
+];
 
 export default [clientConfig, serverConfig];
