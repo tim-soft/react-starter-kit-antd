@@ -23,6 +23,19 @@ class Layout extends React.Component {
     children: PropTypes.node.isRequired,
   };
 
+  componentDidMount() {
+    const canUseDOM = !!(
+      (typeof window !== 'undefined' &&
+      window.document && window.document.createElement)
+    );
+
+    // Don't load these styles server-side
+    if(canUseDOM && __DEV__) {
+      // Import the antThemeLoader.less file for hot reloading theme changes
+      require('components/antThemeLoader.less')
+    }
+  }
+
   render() {
     return (
       <div>
